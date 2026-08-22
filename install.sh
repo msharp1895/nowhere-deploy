@@ -5,8 +5,8 @@ BIN=/usr/local/bin/nowhere
 SVC=nowhere
 UNIT=/etc/systemd/system/$SVC.service
 CERT_DIR=/etc/nowhere/certs
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
+GREEN='\033[1;32m'
+CYAN='\033[1;36m'
 NC='\033[0m'
 
 [ "$(id -u)" -eq 0 ] || exit 1
