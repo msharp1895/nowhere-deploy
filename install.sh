@@ -35,14 +35,17 @@ tar -xzf $tmp/np.tar.gz -C $tmp
 find $tmp -name nowhere -type f -executable | head -1 | xargs -I{} install -m 755 {} $BIN
 rm -rf $tmp
 
-[ -f /root/.acme.sh/acme.sh ] || curl -fsSL https://get.acme.sh | sh -s email=admin@$DOMAIN
+# 安装 acme.sh（更兼容管道运行）
+if [ ! -f /root/.acme.sh/acme.sh ]; then
+  curl -fsSL https://get.acme.sh | sh -s -- --email "admin@${DOMAIN}"
+fi
 . /root/.acme.sh/acme.sh.env 2>/dev/null || true
 
 mkdir -p $CERT_DIR && chmod 700 $CERT_DIR
 systemctl stop nginx apache2 caddy 2>/dev/null || true
 
-~/.acme.sh/acme.sh --issue -d $DOMAIN --standalone --keylength 2048 --force --server letsencrypt
-~/.acme.sh/acme.sh --install-cert -d $DOMAIN \
+~/.acme.sh/acme.sh --issue -d "$DOMAIN" --standalone --keylength 2048 --force --server letsencrypt
+~/.acme.sh/acme.sh --install-cert -d "$DOMAIN" \
   --key-file $CERT_DIR/key.pem \
   --fullchain-file $CERT_DIR/fullchain.pem \
   --reloadcmd "systemctl restart $SVC"
