@@ -11,3 +11,7 @@ curl -fsSL -o /tmp/install.sh "https://raw.githubusercontent.com/msharp1895/nowh
 ```bash
 curl -fsSL -o /tmp/update.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/update.sh?$(date +%s)" && sudo bash /tmp/update.sh
 ```
+## 卸载
+```bash
+curl -fsSL -o /tmp/uninstall.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/uninstall.sh?$(date +%s)" && sudo bash /tmp/uninstall.sh
+```
