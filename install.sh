@@ -15,8 +15,9 @@ read -p "Domain: " DOMAIN
 DOMAIN=$(echo "$DOMAIN" | xargs)
 [ -n "$DOMAIN" ] || exit 1
 
-read -p "Port [24]: " PORT
-PORT=${PORT:-24}
+read -p "Port: " PORT
+PORT=$(echo "$PORT" | xargs)
+[ -n "$PORT" ] || exit 1
 
 PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 16)
 
