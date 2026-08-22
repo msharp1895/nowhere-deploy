@@ -1,7 +1,7 @@
 # Nowhere Deploy
 
 [Nowhere](https://github.com/NodePassProject/Nowhere) Portal 一键部署脚本。
-输入域名，设置端口，自动申请证书并生成链接。
+dns到域名，输入域名，设置端口，自动申请证书并生成链接。
 
 ## 使用方法
 
