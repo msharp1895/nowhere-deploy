@@ -26,21 +26,10 @@ progress() {
 }
 
 progress 1 "Installing dependencies"
-if command -v apt-get >/dev/null 2>&1; then
-  export DEBIAN_FRONTEND=noninteractive
-  command -v curl >/dev/null || apt-get install -y -qq curl >/dev/null 2>&1
-  command -v tar >/dev/null || apt-get install -y -qq tar >/dev/null 2>&1
-  command -v socat >/dev/null || apt-get install -y -qq socat >/dev/null 2>&1
-elif command -v apk >/dev/null 2>&1; then
-  command -v curl >/dev/null || apk add --no-cache curl >/dev/null 2>&1
-  command -v tar >/dev/null || apk add --no-cache tar >/dev/null 2>&1
-  command -v socat >/dev/null || apk add --no-cache socat >/dev/null 2>&1
-  command -v bash >/dev/null || apk add --no-cache bash >/dev/null 2>&1
-  # Alpine virt (musl) 兼容 glibc 二进制
-  apk add --no-cache gcompat libstdc++ libgcc >/dev/null 2>&1 || true
-else
-  exit 1
-fi
+export DEBIAN_FRONTEND=noninteractive
+command -v curl >/dev/null || apt-get install -y -qq curl >/dev/null 2>&1
+command -v tar >/dev/null || apt-get install -y -qq tar >/dev/null 2>&1
+command -v socat >/dev/null || apt-get install -y -qq socat >/dev/null 2>&1
 echo -ne "\033[2K"
 
 progress 2 "Downloading Nowhere"
@@ -65,12 +54,7 @@ echo -ne "\033[2K"
 
 progress 4 "Requesting certificate"
 mkdir -p $CERT_DIR && chmod 700 $CERT_DIR
-if command -v systemctl >/dev/null 2>&1; then
-  systemctl stop nginx apache2 caddy 2>/dev/null || true
-else
-  rc-service nginx stop 2>/dev/null || true
-  rc-service caddy stop 2>/dev/null || true
-fi
+systemctl stop nginx apache2 caddy 2>/dev/null || true
 ~/.acme.sh/acme.sh --issue -d "$DOMAIN" --standalone --keylength 2048 --force --server letsencrypt >/dev/null 2>&1
 ~/.acme.sh/acme.sh --install-cert -d "$DOMAIN" \
   --key-file $CERT_DIR/key.pem \
@@ -81,9 +65,7 @@ echo -ne "\033[2K"
 
 progress 5 "Creating service"
 cmd="portal://${PASSWORD}@:${PORT}?net=mix&tls=2&crt=${CERT_DIR}/fullchain.pem&key=${CERT_DIR}/key.pem&log=info"
-
-if command -v systemctl >/dev/null 2>&1; then
-  cat > $UNIT <<EOF
+cat > $UNIT <<EOF
 [Unit]
 Description=Nowhere Portal
 After=network-online.target
@@ -99,21 +81,8 @@ LimitNOFILE=1048576
 [Install]
 WantedBy=multi-user.target
 EOF
-  systemctl daemon-reload >/dev/null 2>&1
-  systemctl enable --now $SVC >/dev/null 2>&1
-else
-  cat > /etc/init.d/$SVC <<EOF
-#!/sbin/openrc-run
-name="nowhere"
-command="$BIN"
-command_args='$cmd'
-command_background=true
-pidfile="/run/\${RC_SVCNAME}.pid"
-EOF
-  chmod +x /etc/init.d/$SVC
-  rc-update add $SVC default >/dev/null 2>&1
-  rc-service $SVC start >/dev/null 2>&1
-fi
+systemctl daemon-reload >/dev/null 2>&1
+systemctl enable --now $SVC >/dev/null 2>&1
 echo -ne "\033[2K"
 
 progress 6 "Done"
