@@ -9,5 +9,5 @@ curl -fsSL -o /tmp/install.sh "https://raw.githubusercontent.com/msharp1895/nowh
 ```
 ## 更新
 ```bash
-curl -fsSL -o /tmp/update.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/update-nowhere.sh?$(date +%s)" && sudo bash /tmp/update.sh
+curl -fsSL -o /tmp/update.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/update.sh?$(date +%s)" && sudo bash /tmp/update.sh
 ```
