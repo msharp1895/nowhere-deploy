@@ -14,3 +14,7 @@ curl -fsSL -o /tmp/update.sh "https://raw.githubusercontent.com/msharp1895/nowhe
 ```bash
 curl -fsSL -o /tmp/uninstall.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/uninstall.sh?$(date +%s)" && sudo bash /tmp/uninstall.sh
 ```
+## komari的https设置
+```bash
+curl -fsSL -o /tmp/komari-https.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/komari-https.sh?$(date +%s)" && sudo bash /tmp/komari-https.sh
+```
