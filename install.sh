@@ -9,23 +9,24 @@ CERT_DIR=/etc/nowhere/certs
 GREEN='\033[0;32m'
 NC='\033[0m'
 
-[ "$(id -u)" -eq 0 ] || { echo "请使用 root 运行"; exit 1; }
+[ "$(id -u)" -eq 0 ] || exit 1
 
-read -p "请输入域名: " DOMAIN
+read -p "Domain: " DOMAIN
 DOMAIN=$(echo "$DOMAIN" | xargs)
-[ -n "$DOMAIN" ] || { echo "域名不能为空"; exit 1; }
+[ -n "$DOMAIN" ] || exit 1
 
 PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 16)
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq >/dev/null 2>&1
-apt-get install -y -qq curl tar ca-certificates socat cron >/dev/null 2>&1
+command -v curl >/dev/null || apt-get install -y -qq curl >/dev/null 2>&1
+command -v tar >/dev/null || apt-get install -y -qq tar >/dev/null 2>&1
+command -v socat >/dev/null || apt-get install -y -qq socat >/dev/null 2>&1
 
 arch=$(uname -m)
 case $arch in
   x86_64|amd64) arch=x86_64-unknown-linux-gnu ;;
   aarch64|arm64) arch=aarch64-unknown-linux-gnu ;;
-  *) echo "不支持的架构"; exit 1 ;;
+  *) exit 1 ;;
 esac
 
 ver=$(curl -fsSL https://api.github.com/repos/NodePassProject/Nowhere/releases/latest 2>/dev/null | grep -oP '"tag_name":\s*"\K[^"]+' | head -1)
@@ -35,9 +36,7 @@ tar -xzf $tmp/np.tar.gz -C $tmp >/dev/null 2>&1
 find $tmp -name nowhere -type f -executable | head -1 | xargs -I{} install -m 755 {} $BIN
 rm -rf $tmp
 
-if [ ! -f /root/.acme.sh/acme.sh ]; then
-  curl -fsSL https://get.acme.sh 2>/dev/null | sh >/dev/null 2>&1
-fi
+[ -f /root/.acme.sh/acme.sh ] || curl -fsSL https://get.acme.sh 2>/dev/null | sh >/dev/null 2>&1
 . /root/.acme.sh/acme.sh.env 2>/dev/null || true
 
 mkdir -p $CERT_DIR && chmod 700 $CERT_DIR
@@ -71,6 +70,6 @@ EOF
 
 systemctl daemon-reload >/dev/null 2>&1
 systemctl enable --now $SVC >/dev/null 2>&1
-sleep 2
+sleep 1
 
 echo -e "${GREEN}nowhere://${PASSWORD}@${DOMAIN}:${PORT}?up=udp&down=udp#Nowhere${NC}"
