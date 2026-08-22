@@ -36,7 +36,7 @@ find $tmp -name nowhere -type f -executable | head -1 | xargs -I{} install -m 75
 rm -rf $tmp
 
 if [ ! -f /root/.acme.sh/acme.sh ]; then
-  curl -fsSL https://get.acme.sh | sh -s -- --email "admin@${DOMAIN}"
+  curl -fsSL https://get.acme.sh | sh
 fi
 . /root/.acme.sh/acme.sh.env 2>/dev/null || true
 
@@ -45,7 +45,6 @@ systemctl stop nginx apache2 caddy 2>/dev/null || true
 
 ~/.acme.sh/acme.sh --issue -d "$DOMAIN" --standalone --keylength 2048 --force --server letsencrypt
 
-# 忽略 reload 失败（服务此时还不存在）
 ~/.acme.sh/acme.sh --install-cert -d "$DOMAIN" \
   --key-file $CERT_DIR/key.pem \
   --fullchain-file $CERT_DIR/fullchain.pem \
