@@ -18,8 +18,8 @@ DOMAIN=$(echo "$DOMAIN" | xargs)
 PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 16)
 
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq curl tar ca-certificates socat cron >/dev/null
+apt-get update -qq >/dev/null 2>&1
+apt-get install -y -qq curl tar ca-certificates socat cron >/dev/null 2>&1
 
 arch=$(uname -m)
 case $arch in
@@ -28,28 +28,26 @@ case $arch in
   *) echo "不支持的架构"; exit 1 ;;
 esac
 
-ver=$(curl -fsSL https://api.github.com/repos/NodePassProject/Nowhere/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+' | head -1)
+ver=$(curl -fsSL https://api.github.com/repos/NodePassProject/Nowhere/releases/latest 2>/dev/null | grep -oP '"tag_name":\s*"\K[^"]+' | head -1)
 tmp=$(mktemp -d)
-curl -fsSL -o $tmp/np.tar.gz https://github.com/NodePassProject/Nowhere/releases/download/$ver/nowhere-$arch.tar.gz
-tar -xzf $tmp/np.tar.gz -C $tmp
+curl -fsSL -o $tmp/np.tar.gz https://github.com/NodePassProject/Nowhere/releases/download/$ver/nowhere-$arch.tar.gz 2>/dev/null
+tar -xzf $tmp/np.tar.gz -C $tmp >/dev/null 2>&1
 find $tmp -name nowhere -type f -executable | head -1 | xargs -I{} install -m 755 {} $BIN
 rm -rf $tmp
 
 if [ ! -f /root/.acme.sh/acme.sh ]; then
-  curl -fsSL https://get.acme.sh | sh
+  curl -fsSL https://get.acme.sh 2>/dev/null | sh >/dev/null 2>&1
 fi
 . /root/.acme.sh/acme.sh.env 2>/dev/null || true
 
 mkdir -p $CERT_DIR && chmod 700 $CERT_DIR
 systemctl stop nginx apache2 caddy 2>/dev/null || true
 
-~/.acme.sh/acme.sh --issue -d "$DOMAIN" --standalone --keylength 2048 --force --server letsencrypt
-
+~/.acme.sh/acme.sh --issue -d "$DOMAIN" --standalone --keylength 2048 --force --server letsencrypt >/dev/null 2>&1
 ~/.acme.sh/acme.sh --install-cert -d "$DOMAIN" \
   --key-file $CERT_DIR/key.pem \
   --fullchain-file $CERT_DIR/fullchain.pem \
-  --reloadcmd "systemctl restart $SVC" || true
-
+  --reloadcmd "systemctl restart $SVC" >/dev/null 2>&1 || true
 chmod 600 $CERT_DIR/*.pem
 
 cmd="portal://${PASSWORD}@:${PORT}?net=mix&tls=2&crt=${CERT_DIR}/fullchain.pem&key=${CERT_DIR}/key.pem&log=info"
@@ -71,8 +69,8 @@ LimitNOFILE=1048576
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable --now $SVC
+systemctl daemon-reload >/dev/null 2>&1
+systemctl enable --now $SVC >/dev/null 2>&1
 sleep 2
 
 echo -e "${GREEN}nowhere://${PASSWORD}@${DOMAIN}:${PORT}?up=udp&down=udp#Nowhere${NC}"
