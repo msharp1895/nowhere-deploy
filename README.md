@@ -5,8 +5,8 @@ dns到域名，输入域名，设置端口，自动申请证书并生成链接�
 
 ## 使用方法
 
-## 安装脚本
 ```bash
+## 安装脚本
 curl -fsSL -o /tmp/install.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/install.sh?$(date +%s)" && sudo bash /tmp/install.sh
 
 ## 更新脚本
