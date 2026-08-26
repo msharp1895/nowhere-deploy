@@ -1,6 +1,8 @@
 # Nowhere Deploy
 
-[Nowhere](https://github.com/NodePassProject/Nowhere) Portal 一键部署脚本。dns到域名，输入域名，设置端口，自动申请证书并生成链接。
+[Nowhere](https://github.com/NodePassProject/Nowhere) Portal 一键部署。DNS 指到本机，输入域名和端口，申请证书并输出 Anywhere 用的 `nowhere://` 链接。
+
+Debian/Ubuntu + root。申请证书会占用 **80 端口**（临时停 nginx/caddy/apache，完成后拉起）。重装保留原密码。
 
 ## 安装
 ```bash
