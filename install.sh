@@ -1,104 +1,76 @@
 #!/usr/bin/env bash
-set -euo pipefail
-echo "Nowhere deploy"
+set -e
+
 BIN=/usr/local/bin/nowhere
 SVC=nowhere
 UNIT=/etc/systemd/system/$SVC.service
-DIR=/etc/nowhere
-CERT=$DIR/certs
-ENV=$DIR/portal.env
-ACME=/root/.acme.sh/acme.sh
-G='\033[1;32m'; C='\033[1;36m'; R='\033[1;31m'; N='\033[0m'
-err() { trap - ERR; echo -e "\n${R}$*${N}" >&2; exit 1; }
-trap 'err "失败，行 $LINENO"' ERR
-progress() { echo -e "${C}[$1/6] $2...${N}"; }
+CERT_DIR=/etc/nowhere/certs
+GREEN='\033[1;32m'
+CYAN='\033[1;36m'
+RED='\033[1;31m'
+NC='\033[0m'
 
-[ "$(id -u)" -eq 0 ] || err "请用 root 运行"
-command -v apt-get >/dev/null || err "仅支持 Debian/Ubuntu"
+[ "$(id -u)" -eq 0 ] || exit 1
 
-PASS=""; DOMAIN0=""; PORT0=""
-if [ -f "$ENV" ]; then . "$ENV"; PASS=${NOWHERE_PASSWORD-}; DOMAIN0=${NOWHERE_DOMAIN-}; PORT0=${NOWHERE_PORT-}; fi
-if [ -z "$PASS" ] && [ -f "$UNIT" ]; then PASS=$(sed -n 's/.*portal:\/\/\([^@]*\)@:.*/\1/p' "$UNIT" | head -1 || true); fi
-case "$PASS" in *'$'*) PASS="" ;; esac
+read -p "Domain: " DOMAIN
+DOMAIN=$(echo "$DOMAIN" | xargs)
+[ -n "$DOMAIN" ] || exit 1
 
-printf 'Domain%s: ' "${DOMAIN0:+ [$DOMAIN0]}"
-read -r DOMAIN </dev/tty || read -r DOMAIN || err "无法读取输入"
-DOMAIN=$(echo "${DOMAIN:-$DOMAIN0}" | xargs)
-[ -n "$DOMAIN" ] || err "Domain 不能为空"
-printf 'Port%s: ' "${PORT0:+ [$PORT0]}"
-read -r PORT </dev/tty || read -r PORT || err "无法读取输入"
-PORT=$(echo "${PORT:-$PORT0}" | xargs)
-[[ "$PORT" =~ ^[1-9][0-9]{0,4}$ && "$PORT" -le 65535 && "$PORT" -ne 80 ]] || err "Port 须为 1-65535，且不能是 80"
-if [ -z "$PASS" ]; then
-  PASS=$(dd if=/dev/urandom bs=256 count=1 2>/dev/null | tr -dc 'A-Za-z0-9')
-  PASS=${PASS:0:16}
-fi
-[ ${#PASS} -eq 16 ] || err "无法生成密码"
+read -p "Port: " PORT
+PORT=$(echo "$PORT" | xargs)
+[ -n "$PORT" ] || exit 1
 
-web=()
-restore() { for s in "${web[@]+"${web[@]}"}"; do systemctl start "$s" 2>/dev/null || true; done; }
-trap restore EXIT
+PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 16)
+
+progress() {
+  echo -ne "${CYAN}[$1/6] $2...${NC}\r"
+}
 
 progress 1 "Installing dependencies"
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq curl tar ca-certificates socat
+apt-get install -y -qq curl tar ca-certificates socat >/dev/null 2>&1 || true
+echo -ne "\033[2K"
 
 progress 2 "Downloading Nowhere"
-case "$(uname -m)" in
+arch=$(uname -m)
+case $arch in
   x86_64|amd64) arch=x86_64-unknown-linux-gnu ;;
   aarch64|arm64) arch=aarch64-unknown-linux-gnu ;;
-  *) err "不支持的架构: $(uname -m)" ;;
+  *) echo -e "\n${RED}Unsupported architecture: $arch${NC}"; exit 1 ;;
 esac
+ver=$(curl -fsSL https://api.github.com/repos/NodePassProject/Nowhere/releases/latest 2>/dev/null | grep -oP '"tag_name":\s*"\K[^"]+' | head -1)
+[ -n "$ver" ] || { echo -e "\n${RED}Failed to get latest version${NC}"; exit 1; }
 tmp=$(mktemp -d)
-json=$(curl -fL --connect-timeout 8 --max-time 20 -H "User-Agent: nowhere-deploy" \
-  https://api.github.com/repos/NodePassProject/Nowhere/releases/latest 2>/dev/null || true)
-ver=$(printf '%s' "$json" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1 || true)
-if [ -n "$ver" ]; then
-  url="https://github.com/NodePassProject/Nowhere/releases/download/${ver}/nowhere-${arch}.tar.gz"
-  digest=$(printf '%s' "$json" | sed 's/},{/}\n{/g' | grep -F "nowhere-$arch.tar.gz" | sed -n 's/.*"digest": *"sha256:\([^"]*\)".*/\1/p' | head -1 || true)
-else
-  ver=latest
-  url="https://github.com/NodePassProject/Nowhere/releases/latest/download/nowhere-${arch}.tar.gz"
-  digest=""
-fi
-curl -fL --connect-timeout 10 --max-time 120 --retry 2 -o "$tmp/np.tar.gz" "$url" \
-  || { rm -rf "$tmp"; err "下载失败（GitHub 超时或无法访问）"; }
-if [ -n "${digest:-}" ]; then
-  [ "$(sha256sum "$tmp/np.tar.gz" | awk '{print $1}')" = "$digest" ] || { rm -rf "$tmp"; err "校验失败"; }
-fi
-tar -xzf "$tmp/np.tar.gz" -C "$tmp"
-bin=$(find "$tmp" -name nowhere -type f | head -1 || true)
-[ -n "$bin" ] || { rm -rf "$tmp"; err "压缩包里没有 nowhere"; }
-install -m 755 "$bin" "$BIN"
-rm -rf "$tmp"
+curl -fsSL -o $tmp/np.tar.gz https://github.com/NodePassProject/Nowhere/releases/download/$ver/nowhere-$arch.tar.gz 2>/dev/null || {
+  echo -e "\n${RED}Failed to download Nowhere${NC}"; exit 1
+}
+tar -xzf $tmp/np.tar.gz -C $tmp >/dev/null 2>&1
+find $tmp -name nowhere -type f -executable | head -1 | xargs -I{} install -m 755 {} $BIN
+rm -rf $tmp
+echo -ne "\033[2K"
 
 progress 3 "Installing acme.sh"
-[ -x "$ACME" ] || curl -fL --connect-timeout 8 --max-time 60 https://get.acme.sh | sh >/dev/null
-[ -x "$ACME" ] || err "acme.sh 安装失败"
+[ -f /root/.acme.sh/acme.sh ] || curl -fsSL https://get.acme.sh 2>/dev/null | sh >/dev/null 2>&1
 . /root/.acme.sh/acme.sh.env 2>/dev/null || true
+echo -ne "\033[2K"
 
 progress 4 "Requesting certificate"
-mkdir -p "$CERT"; chmod 700 "$DIR" "$CERT"
-if [ "$DOMAIN" != "$DOMAIN0" ] || [ ! -s "$CERT/fullchain.pem" ] || [ ! -s "$CERT/key.pem" ]; then
-  for s in nginx apache2 caddy; do
-    if systemctl is-active --quiet "$s" 2>/dev/null; then web+=("$s"); systemctl stop "$s"; fi
-  done
-  "$ACME" --issue -d "$DOMAIN" --standalone --keylength 2048 --server letsencrypt >/dev/null 2>&1 \
-    || err "证书申请失败：检查 DNS 和 80 端口"
+mkdir -p $CERT_DIR && chmod 700 $CERT_DIR
+systemctl stop nginx apache2 caddy 2>/dev/null || true
+if ! ~/.acme.sh/acme.sh --issue -d "$DOMAIN" --standalone --keylength 2048 --force --server letsencrypt >/dev/null 2>&1; then
+  echo -e "\n${RED}Certificate request failed. Check domain DNS and port 80.${NC}"
+  exit 1
 fi
-"$ACME" --install-cert -d "$DOMAIN" --key-file "$CERT/key.pem" --fullchain-file "$CERT/fullchain.pem" \
-  --reloadcmd "systemctl restart $SVC" >/dev/null
-chmod 600 "$CERT"/fullchain.pem "$CERT"/key.pem
-restore; web=()
+~/.acme.sh/acme.sh --install-cert -d "$DOMAIN" \
+  --key-file $CERT_DIR/key.pem \
+  --fullchain-file $CERT_DIR/fullchain.pem \
+  --reloadcmd "systemctl restart $SVC" >/dev/null 2>&1 || true
+chmod 600 $CERT_DIR/*.pem
+echo -ne "\033[2K"
 
 progress 5 "Creating service"
-umask 077
-printf 'NOWHERE_PASSWORD=%s\nNOWHERE_DOMAIN=%s\nNOWHERE_PORT=%s\nNOWHERE_VERSION=%s\n' \
-  "$PASS" "$DOMAIN" "$PORT" "$ver" >"$ENV"
-chmod 600 "$ENV"
-cmd="portal://${PASS}@:${PORT}?net=mix&tls=2&crt=${CERT}/fullchain.pem&key=${CERT}/key.pem&log=info"
-cat >"$UNIT" <<EOF
+cmd="portal://${PASSWORD}@:${PORT}?net=mix&tls=2&crt=${CERT_DIR}/fullchain.pem&key=${CERT_DIR}/key.pem&log=info"
+cat > $UNIT <<EOF
 [Unit]
 Description=Nowhere Portal
 After=network-online.target
@@ -114,11 +86,19 @@ LimitNOFILE=1048576
 [Install]
 WantedBy=multi-user.target
 EOF
-systemctl daemon-reload
-systemctl enable --now "$SVC"
+systemctl daemon-reload >/dev/null 2>&1
+systemctl enable --now $SVC >/dev/null 2>&1
+echo -ne "\033[2K"
 
 progress 6 "Done"
 sleep 1
+echo -ne "\033[2K"
 
-systemctl is-active --quiet "$SVC" || err "启动失败: journalctl -u $SVC -n 30"
-echo -e "${G}nowhere://${PASS}@${DOMAIN}:${PORT}?up=udp&down=udp#Nowhere${N}"
+if ! systemctl is-active --quiet $SVC; then
+  echo -e "\n${RED}Service failed to start. Check: journalctl -u $SVC -n 30${NC}"
+  exit 1
+fi
+
+echo
+echo -e "${GREEN}nowhere://${PASSWORD}@${DOMAIN}:${PORT}?up=udp&down=udp#Nowhere${NC}"
+echo
