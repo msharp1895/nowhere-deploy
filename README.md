@@ -6,13 +6,13 @@ Debian/Ubuntu + root。申请证书占用 **80 端口**（服务端口不能是 
 
 ## 安装
 ```bash
-curl -fL --connect-timeout 8 --max-time 60 -o /tmp/install.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/install.sh?$(date +%s)" && sudo bash /tmp/install.sh
+echo fetching && curl -fL --connect-timeout 5 --max-time 20 -# -o /tmp/install.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/install.sh" && sudo bash /tmp/install.sh
 ```
 ## 更新
 ```bash
-curl -fL --connect-timeout 8 --max-time 60 -o /tmp/update.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/update.sh?$(date +%s)" && sudo bash /tmp/update.sh
+echo fetching && curl -fL --connect-timeout 5 --max-time 20 -# -o /tmp/update.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/update.sh" && sudo bash /tmp/update.sh
 ```
 ## 卸载
 ```bash
-curl -fL --connect-timeout 8 --max-time 60 -o /tmp/uninstall.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/uninstall.sh?$(date +%s)" && sudo bash /tmp/uninstall.sh
+echo fetching && curl -fL --connect-timeout 5 --max-time 20 -# -o /tmp/uninstall.sh "https://raw.githubusercontent.com/msharp1895/nowhere-deploy/main/uninstall.sh" && sudo bash /tmp/uninstall.sh
 ```
