@@ -69,7 +69,8 @@ chmod 600 $CERT_DIR/*.pem
 echo -ne "\033[2K"
 
 progress 5 "Creating service"
-cmd="portal://${PASSWORD}@:${PORT}?net=mix&tls=2&crt=${CERT_DIR}/fullchain.pem&key=${CERT_DIR}/key.pem&log=info"
+# Nowhere 2.0: 紧凑端点同时开启 TCP+UDP，已移除废弃的 net= 参数
+cmd="portal://${PASSWORD}@:${PORT}?tls=2&crt=${CERT_DIR}/fullchain.pem&key=${CERT_DIR}/key.pem&log=info"
 cat > $UNIT <<EOF
 [Unit]
 Description=Nowhere Portal
