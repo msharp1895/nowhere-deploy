@@ -69,8 +69,8 @@ chmod 600 $CERT_DIR/*.pem
 echo -ne "\033[2K"
 
 progress 5 "Creating service"
-# Nowhere 2.0: 紧凑端点同时开启 TCP+UDP，已移除废弃的 net= 参数
-cmd="portal://${PASSWORD}@:${PORT}?tls=2&crt=${CERT_DIR}/fullchain.pem&key=${CERT_DIR}/key.pem&log=info"
+# Nowhere 2.0：默认开启 morph=1
+cmd="portal://${PASSWORD}@:${PORT}?tls=2&crt=${CERT_DIR}/fullchain.pem&key=${CERT_DIR}/key.pem&morph=1&log=info"
 cat > $UNIT <<EOF
 [Unit]
 Description=Nowhere Portal
@@ -101,5 +101,5 @@ if ! systemctl is-active --quiet $SVC; then
 fi
 
 echo
-echo -e "${GREEN}nowhere://${PASSWORD}@${DOMAIN}:${PORT}?up=udp&down=udp#Nowhere${NC}"
+echo -e "${GREEN}nowhere://${PASSWORD}@${DOMAIN}:${PORT}?up=udp&down=udp&morph=1&mux=0#Nowhere${NC}"
 echo
