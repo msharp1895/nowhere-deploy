@@ -1,6 +1,8 @@
 # Nowhere Deploy
 
-[Nowhere](https://github.com/NodePassProject/Nowhere) Portal 一键部署脚本。dns到域名，输入域名，设置端口，自动申请证书并生成链接。
+[Nowhere](https://github.com/NodePassProject/Nowhere) Portal 一键部署脚本（适配Nowhere 3.0）。
+
+域名解析到本机后，输入域名和端口，自动申请 Let's Encrypt 证书并启动 Portal 服务。
 
 ## 安装
 ```bash
