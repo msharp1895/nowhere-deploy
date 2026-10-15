@@ -12,6 +12,7 @@ esac
 ver=$(curl -fsSL https://api.github.com/repos/NodePassProject/Nowhere/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+')
 [ -n "$ver" ] || { echo "Failed to get latest version"; exit 1; }
 
+echo "Updating Nowhere to $ver ..."
 tmp=$(mktemp -d)
 curl -fsSL -o $tmp/np.tar.gz https://github.com/NodePassProject/Nowhere/releases/download/$ver/nowhere-$arch.tar.gz || {
   echo "Failed to download"; exit 1
@@ -22,3 +23,7 @@ rm -rf $tmp
 
 systemctl restart nowhere 2>/dev/null || true
 echo "Updated to $ver"
+echo
+echo "Note: Nowhere 3.0 is wire-incompatible with 2.x."
+echo "If the service fails to start, re-run the install script or update the portal:// URL in /etc/systemd/system/nowhere.service"
+echo "to use 32-char hex key and the new endpoint format (e.g. portal://KEY@*:PORT?tls=2&...)."
