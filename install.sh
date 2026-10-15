@@ -20,7 +20,8 @@ read -p "Port: " PORT
 PORT=$(echo "$PORT" | xargs)
 [ -n "$PORT" ] || exit 1
 
-PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 16)
+# Nowhere 3.0: Shared Key must be exactly 32 lowercase hexadecimal characters
+KEY=$(openssl rand -hex 16)
 
 progress() {
   echo -ne "${CYAN}[$1/6] $2...${NC}\r"
@@ -28,7 +29,7 @@ progress() {
 
 progress 1 "Installing dependencies"
 export DEBIAN_FRONTEND=noninteractive
-apt-get install -y -qq curl tar ca-certificates socat >/dev/null 2>&1 || true
+apt-get install -y -qq curl tar ca-certificates socat openssl >/dev/null 2>&1 || true
 echo -ne "\033[2K"
 
 progress 2 "Downloading Nowhere"
@@ -69,11 +70,12 @@ chmod 600 $CERT_DIR/*.pem
 echo -ne "\033[2K"
 
 progress 5 "Creating service"
-# Nowhere 2.0：默认开启 morph=1
-cmd="portal://${PASSWORD}@:${PORT}?tls=2&crt=${CERT_DIR}/fullchain.pem&key=${CERT_DIR}/key.pem&morph=1&log=info"
+# Nowhere 3.0 (NW3): compact endpoint *:$PORT for both TLS and QUIC
+# morph=1 is default; tls=2 with supplied certs
+cmd="portal://${KEY}@*:${PORT}?tls=2&crt=${CERT_DIR}/fullchain.pem&key=${CERT_DIR}/key.pem&morph=1"
 cat > $UNIT <<EOF
 [Unit]
-Description=Nowhere Portal
+Description=Nowhere Portal (NW3)
 After=network-online.target
 Wants=network-online.target
 
@@ -101,5 +103,17 @@ if ! systemctl is-active --quiet $SVC; then
 fi
 
 echo
-echo -e "${GREEN}nowhere://${PASSWORD}@${DOMAIN}:${PORT}?up=udp&down=udp&morph=1&mux=0#Nowhere${NC}"
+echo -e "${GREEN}=== Nowhere 3.0 Portal Ready ===${NC}"
+echo
+echo -e "${CYAN}Shared Key:${NC} ${KEY}"
+echo
+echo -e "${GREEN}Anywhere / share links (morph=1 default):${NC}"
+echo -e "${GREEN}TCP:${NC} nowhere://${KEY}@${DOMAIN}:${PORT}?net=tcp&morph=1#Nowhere"
+echo -e "${GREEN}UDP:${NC} nowhere://${KEY}@${DOMAIN}:${PORT}?net=udp&morph=1#Nowhere"
+echo
+echo -e "${CYAN}Native Vector example (TCP):${NC}"
+echo -e "vector://${KEY}@${DOMAIN}/tcp:${PORT}?in=127.0.0.1:1080"
+echo
+echo -e "${CYAN}Service status:${NC} systemctl status nowhere"
+echo -e "${CYAN}Logs:${NC} journalctl -u nowhere -f"
 echo
